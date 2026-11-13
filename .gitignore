@@ -1,0 +1,14 @@
+# Jupyter
+.ipynb_checkpoints/
+
+# Anaconda project metadata
+anaconda_projects/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# OS
+.DS_Store
