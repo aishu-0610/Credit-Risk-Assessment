@@ -12,3 +12,6 @@ venv/
 
 # OS
 .DS_Store
+
+# Saved models (recreated by running the notebook)
+*.pkl

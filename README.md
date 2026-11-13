@@ -2,7 +2,7 @@
 
 Predicting whether a borrower will default on a loan, using applicant and loan details. The project compares a Logistic Regression baseline with a tuned XGBoost model. It also covers class imbalance, probability calibration and model explainability with SHAP.
 
-> **Status: in progress.** Sections 1–14 are complete. Section 15 (error analysis of false positives and false negatives) is underway.
+> **Status: in progress.** Modelling is complete and the final model is saved. Section 15 (error analysis of false positives and false negatives) is underway.
 
 ## Dataset
 
@@ -44,6 +44,7 @@ All work is in [`Credit_Risk.ipynb`](Credit_Risk.ipynb):
 13. **Probability calibration**: Platt (sigmoid) scaling with `CalibratedClassifierCV` and calibration curves
 14. **SHAP interpretation**: global summary plot and a local waterfall plot for a single applicant
 15. **Error analysis** *(in progress)*: looking at false positives and false negatives from the tuned model
+16. **Save the final model**: find the best threshold for the calibrated model, then save the model and threshold with `joblib`
 
 ## Results so far
 
@@ -59,12 +60,30 @@ All work is in [`Credit_Risk.ipynb`](Credit_Risk.ipynb):
 | Model | Accuracy | Precision | Recall | F1 |
 |---|---|---|---|---|
 | Logistic Regression (baseline) | 0.82 | 0.56 | 0.79 | 0.65 |
-| XGBoost (tuned) | 0.92 | 0.83 | 0.80 | 0.82 |
+| XGBoost (tuned) | 0.92 | 0.83 | 0.81 | 0.82 |
+| XGBoost (tuned + calibrated, threshold 0.71) | 0.94 | 0.97 | 0.74 | 0.84 |
 
-The tuned XGBoost reached a cross-validated average precision of 0.90. Best parameters:
-`n_estimators=506`, `max_depth=5`, `learning_rate≈0.079`, `subsample≈0.89`, `colsample_bytree≈0.82`, `min_child_weight=3`, `gamma≈0.70`.
+The tuned XGBoost reached a cross-validated average precision of 0.90. Best parameters (`random_state=42`):
+`n_estimators=435`, `max_depth=6`, `learning_rate≈0.063`, `subsample≈0.95`, `colsample_bytree≈0.85`, `min_child_weight=4`, `gamma≈1.48`.
 
-On the test set, the tuned model makes 224 false positives and 270 false negatives. Missed defaults are more costly to a lender, so this is the focus of the error analysis.
+The final model is the tuned XGBoost after sigmoid calibration. Its decision threshold of 0.71 is the one that maximizes F1 on the precision-recall curve. Compared with the default 0.5 threshold, it gives much higher precision but lower recall.
+
+At the default threshold, the tuned model makes 221 false positives and 264 false negatives on the test set. Missed defaults are more costly to a lender, so this is the focus of the error analysis.
+
+## Using the saved model
+
+Running the notebook creates `credit_risk_model.pkl` (the calibrated pipeline, including preprocessing) and `best_threshold.pkl`. These files are not committed to the repo.
+
+```python
+import joblib
+
+model = joblib.load("credit_risk_model.pkl")
+threshold = joblib.load("best_threshold.pkl")
+
+# new_applicants: DataFrame with the same feature columns as the dataset (without loan_status)
+default_prob = model.predict_proba(new_applicants)[:, 1]
+predicted_default = (default_prob > threshold).astype(int)
+```
 
 ## Next steps
 
