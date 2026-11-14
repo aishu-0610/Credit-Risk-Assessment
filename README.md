@@ -2,7 +2,7 @@
 
 Predicting whether a borrower will default on a loan, using applicant and loan details. The project compares a Logistic Regression baseline with a tuned XGBoost model. It also covers class imbalance, probability calibration and model explainability with SHAP.
 
-> **Status: in progress.** Modelling is complete and the final model is saved. Section 15 (error analysis of false positives and false negatives) is underway.
+> **Status: in progress.** Modelling is complete and the final model is saved. A FastAPI prediction API (`main.py`) is working. The error analysis (section 15) and a web front end are underway.
 
 ## Dataset
 
@@ -85,8 +85,48 @@ default_prob = model.predict_proba(new_applicants)[:, 1]
 predicted_default = (default_prob > threshold).astype(int)
 ```
 
+## Prediction API
+
+`main.py` serves the saved model as a REST API built with FastAPI.
+
+- On startup, it loads `credit_risk_model.pkl` and `best_threshold.pkl`.
+- `POST /predict` takes one loan application and returns the probability of default. It labels the applicant **High Risk** if the probability is at or above the saved threshold, and **Low Risk** otherwise.
+- The empty `static/` folder will hold the web front end (`index.html`), which will be served at `/`.
+
+**Run it**. Run the notebook first to create the `.pkl` files, then start the server from the project folder:
+
+```bash
+uvicorn main:app --reload
+```
+
+Interactive API docs are at http://127.0.0.1:8000/docs.
+
+**Example request**
+
+```bash
+curl -X POST http://127.0.0.1:8000/predict \
+  -H "Content-Type: application/json" \
+  -d '{"person_age": 22, "person_income": 59000, "person_home_ownership": "RENT",
+       "person_emp_length": 5, "loan_intent": "PERSONAL", "loan_grade": "D",
+       "loan_amnt": 35000, "loan_int_rate": 16.02, "loan_percent_income": 0.59,
+       "cb_person_default_on_file": "Y", "cb_person_cred_hist_length": 3}'
+```
+
+**Example response**
+
+```json
+{
+  "default_probability": 0.958,
+  "default_prediction": 1,
+  "threshold": 0.711,
+  "Result": "High Risk"
+}
+```
+
 ## Next steps
 
+- Build the web front end in `static/` (form for entering applicant details)
+- Add input validation to the API (allowed category values, positive numbers)
 - Finish the false positive / false negative analysis
 - Pick the classification threshold on a validation split, not the test set
 - Use the tuned model consistently for calibration and SHAP
@@ -95,8 +135,8 @@ predicted_default = (default_prob > threshold).astype(int)
 ## Running the notebook
 
 ```bash
-git clone <this-repo-url>
-cd <repo-folder>
+git clone https://github.com/aishu-0610/Credit-Risk-Assessment.git
+cd Credit-Risk-Assessment
 pip install -r requirements.txt
 jupyter notebook Credit_Risk.ipynb
 ```
@@ -108,6 +148,8 @@ Developed with Python 3.13.
 ```
 ├── Credit_Risk.ipynb         # Main notebook: EDA, modelling, evaluation, SHAP
 ├── credit_risk_dataset.csv   # Dataset
+├── main.py                   # FastAPI prediction API
+├── static/                   # Web front end (in progress)
 ├── requirements.txt          # Python dependencies
 └── README.md
 ```
